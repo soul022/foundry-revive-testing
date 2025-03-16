@@ -96,10 +96,10 @@ main() {
     exit 0
   fi
 
-  FOUNDRYUP_REPO=${FOUNDRYUP_REPO:-foundry-rs/foundry}
+  FOUNDRYUP_REPO=${FOUNDRYUP_REPO:-soul022/foundry-revive-testing}
 
   # Install by downloading binaries
-  if [[ "$FOUNDRYUP_REPO" == "foundry-rs/foundry" && -z "$FOUNDRYUP_BRANCH" && -z "$FOUNDRYUP_COMMIT" ]]; then
+  if [[ "$FOUNDRYUP_REPO" == "soul022/foundry-revivw-testing" && -z "$FOUNDRYUP_BRANCH" && -z "$FOUNDRYUP_COMMIT" ]]; then
     FOUNDRYUP_VERSION=${FOUNDRYUP_VERSION:-stable}
     FOUNDRYUP_TAG=$FOUNDRYUP_VERSION
 
