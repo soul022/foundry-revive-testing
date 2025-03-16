@@ -175,13 +175,13 @@ main() {
     # Optionally download the manuals
     say "$FOUNDRY_MAN_DIR"
     say "$MAN_TARBALL_URL"
-    if check_cmd tar; then
-      say "downloading manpages"
-      mkdir -p "$FOUNDRY_MAN_DIR"
-      download "$MAN_TARBALL_URL" | tar -xzC "$FOUNDRY_MAN_DIR"
-    else
-      say 'skipping manpage download: missing "tar"'
-    fi
+    #if check_cmd tar; then
+    #  say "downloading manpages"
+    #  mkdir -p "$FOUNDRY_MAN_DIR"
+    #  download "$MAN_TARBALL_URL" | tar -xzC "$FOUNDRY_MAN_DIR"
+    #else
+    #  say 'skipping manpage download: missing "tar"'
+    #fi
 
     # Use newly installed version.
     FOUNDRYUP_VERSION=$FOUNDRYUP_TAG
