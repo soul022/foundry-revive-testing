@@ -173,6 +173,7 @@ main() {
     fi
 
     # Optionally download the manuals
+    say "$FOUNDRY_MAN_DIR"
     if check_cmd tar; then
       say "downloading manpages"
       mkdir -p "$FOUNDRY_MAN_DIR"
