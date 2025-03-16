@@ -153,7 +153,10 @@ main() {
 
     ensure mkdir -p "$FOUNDRY_VERSIONS_DIR"
     # Download and extract the binaries archive
-    say "downloading forge, cast, anvil, and chisel for $FOUNDRYUP_TAG version"
+    say "downloading forge and cast for $FOUNDRYUP_TAG version"
+    say "$RELEASE_URL"
+    say "$BIN_ARCHIVE_URL"
+    say "$MAN_TARBALL_URL"
     if [ "$PLATFORM" = "win32" ]; then
       tmp="$(mktemp -d 2>/dev/null || echo ".")/foundry.zip"
       ensure download "$BIN_ARCHIVE_URL" "$tmp"
