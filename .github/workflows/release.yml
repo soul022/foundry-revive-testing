@@ -243,6 +243,19 @@ jobs:
             ${{ steps.artifacts.outputs.file_name }}
             ${{ steps.man.outputs.foundry_man }}
 
+      - name: Test Foundry Linux Musl AMD64
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        env:
+          VERSION_NAME: ${{ (env.IS_NIGHTLY == 'true' && 'nightly') || needs.prepare.outputs.tag_name }}
+        shell: bash
+        run: |
+          uname -s
+          uname -m
+          curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
+          foundryup --install "$VERSION_NAME"
+          forge
+          cast
+
   cleanup:
     name: Release cleanup
     runs-on: ubuntu-latest
