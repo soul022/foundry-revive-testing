@@ -112,7 +112,6 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y musl-tools
-          sudo apt-get install kernal-headers
 
       - name: Build binaries
         env:
@@ -134,7 +133,15 @@ jobs:
 
           [[ "$TARGET" == *windows* ]] && ext=".exe"
 
-          cargo build "${flags[@]}"
+          if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
+            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
+              cd /opt/revive
+              rustup target add x86_64-unknown-linux-musl
+              cargo build "${flags[@]}"
+            "
+          else
+            cargo build "${flags[@]}"
+          fi
 
           bins=(cast forge)
           for name in "${bins[@]}"; do
