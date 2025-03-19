@@ -253,9 +253,12 @@ jobs:
           uname -m
           curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
           export PATH="$HOME/.foundry/bin:$PATH"
-          foundryup --install "$VERSION_NAME"
-          forge
-          cast
+          source ~/.bashrc || true
+          ~/.foundry/bin/foundryup --install "${VERSION_NAME}"
+          which forge
+          forge --version
+          which cast
+          cast --version
 
   cleanup:
     name: Release cleanup
