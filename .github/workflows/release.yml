@@ -91,21 +91,6 @@ jobs:
             svm_target_platform: linux-amd64
             platform: linux
             arch: amd64
-          - runner: macos-14
-            target: x86_64-apple-darwin
-            svm_target_platform: macosx-amd64
-            platform: darwin
-            arch: amd64
-          - runner: macos-14
-            target: aarch64-apple-darwin
-            svm_target_platform: macosx-aarch64
-            platform: darwin
-            arch: arm64
-          - runner: windows-2022
-            target: x86_64-pc-windows-msvc
-            svm_target_platform: windows-amd64
-            platform: win32
-            arch: amd64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -242,23 +227,20 @@ jobs:
           files: |
             ${{ steps.artifacts.outputs.file_name }}
             ${{ steps.man.outputs.foundry_man }}
-
-      - name: Test Foundry Linux Musl AMD64
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        env:
-          VERSION_NAME: ${{ (env.IS_NIGHTLY == 'true' && 'nightly') || needs.prepare.outputs.tag_name }}
+          
+      - name: Install Foundry Linux Musl AMD64
         shell: bash
         run: |
-          uname -s
-          uname -m
           curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
-          export PATH="$HOME/.foundry/bin:$PATH"
-          source ~/.bashrc || true
-          ~/.foundry/bin/foundryup --install "${VERSION_NAME}"
-          which forge
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+
+      - name: Test Foundry binaries
+        shell: bash
+        run: |
+          foundryup --install "${VERSION_NAME}"
           forge --version
-          which cast
           cast --version
+          
 
   cleanup:
     name: Release cleanup
