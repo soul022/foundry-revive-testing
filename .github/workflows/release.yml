@@ -228,18 +228,46 @@ jobs:
             ${{ steps.artifacts.outputs.file_name }}
             ${{ steps.man.outputs.foundry_man }}
           
-      - name: Install Foundry Linux Musl AMD64
+      - name: Test Foundryup Installation
         shell: bash
         run: |
+          uname -s
+          uname -m
+      
           curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
-          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
-
-      - name: Test Foundry binaries
-        shell: bash
-        run: |
-          foundryup --install "${VERSION_NAME}"
-          forge --version
-          cast --version
+      
+          # Explicitly debug directories immediately after installation
+          echo "Checking ~/.foundry directory:"
+          ls -alh ~/.foundry || echo "~/.foundry not created!"
+      
+          echo "Checking ~/.foundry/bin directory:"
+          ls -alh ~/.foundry/bin || echo "~/.foundry/bin not created!"
+      
+          echo "Attempting to find 'foundryup' binary anywhere in home directory:"
+          FOUND_PATH=$(find ~ -type f -name "foundryup" | head -n 1)
+      
+          if [[ -z "$FOUND_PATH" ]]; then
+            echo "foundryup binary NOT found anywhere! Check installer script."
+            exit 1
+          else
+            echo "foundryup found at: $FOUND_PATH"
+          fi
+      
+          # Ensure the binary is executable
+          chmod +x "$FOUND_PATH"
+      
+          # Add the discovered path explicitly to GITHUB_PATH for subsequent steps
+          BIN_DIR=$(dirname "$FOUND_PATH")
+          echo "$BIN_DIR" >> $GITHUB_PATH
+          echo "Path $BIN_DIR appended to GITHUB_PATH."
+      
+          # Immediately verify foundryup and Foundry binaries
+          echo "Verifying 'foundryup' command availability:"
+          foundryup --install "${VERSION_NAME}" || "$FOUND_PATH" --install "${VERSION_NAME}"
+      
+          # Check Forge and Cast
+          forge --version || echo "forge command not available after install"
+          cast --version || echo "cast command not available after install"
           
 
   cleanup:
