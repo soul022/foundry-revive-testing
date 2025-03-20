@@ -92,6 +92,21 @@ jobs:
             svm_target_platform: linux-amd64
             platform: linux
             arch: amd64
+          - runner: macos-14
+            target: x86_64-apple-darwin
+            svm_target_platform: macosx-amd64
+            platform: darwin
+            arch: amd64
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            svm_target_platform: macosx-aarch64
+            platform: darwin
+            arch: arm64
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            svm_target_platform: windows-amd64
+            platform: win32
+            arch: amd64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -242,37 +257,14 @@ jobs:
           export PATH="/home/runner/.config/.foundry/bin:$PATH"
       
           # Run the installation
-          foundryup --install "stable"
+          foundryup --install "${VERSION_NAME}"
       
           # Verify installation
-          which forge || echo "❌ forge binary not found in PATH"
-          which cast || echo "❌ cast binary not found in PATH"
-      
-          forge --version || echo "❌ forge command not available after install"
-          cast --version || echo "❌ cast command not available after install"
-
-      - name: 🔥 Manually Extract and Verify Binaries (Fallback)
-        shell: bash
-        run: |
-          mkdir -p ~/.config/.foundry/bin
-          tar -xvzf ~/.config/.foundry/share/foundry_stable_linux_amd64.tar.gz -C ~/.config/.foundry/bin
-      
-          # Ensure binaries are executable
-          chmod +x ~/.config/.foundry/bin/forge ~/.config/.foundry/bin/cast
-      
-          # Add to PATH
-          echo "~/.config/.foundry/bin" >> $GITHUB_PATH
-          export PATH="~/.config/.foundry/bin:$PATH"
-      
-          # Check if binaries are now found
-          which forge || echo "❌ forge binary not found in PATH"
-          which cast || echo "❌ cast binary not found in PATH"
-      
-          # Run version checks
-          forge --version || echo "❌ forge command not available after install"
-          cast --version || echo "❌ cast command not available after install"
-
-          
+          which forge || echo "forge binary not found in PATH"
+          which cast || echo "cast binary not found in PATH"
+  
+          forge --version || echo "forge command not available after install"
+          cast --version || echo "cast command not available after install"
 
   cleanup:
     name: Release cleanup
