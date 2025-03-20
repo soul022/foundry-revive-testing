@@ -237,38 +237,41 @@ jobs:
       
           curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
       
-          # Explicitly debug directories immediately after installation
-          echo "Checking ~/.foundry directory:"
-          ls -alh ~/.foundry || echo "~/.foundry not created!"
+          # Ensure PATH is updated
+          echo "/home/runner/.config/.foundry/bin" >> $GITHUB_PATH
+          export PATH="/home/runner/.config/.foundry/bin:$PATH"
       
-          echo "Checking ~/.foundry/bin directory:"
-          ls -alh ~/.foundry/bin || echo "~/.foundry/bin not created!"
+          # Run the installation
+          foundryup --install "stable"
       
-          echo "Attempting to find 'foundryup' binary anywhere in home directory:"
-          FOUND_PATH=$(find ~ -type f -name "foundryup" | head -n 1)
+          # Verify installation
+          which forge || echo "❌ forge binary not found in PATH"
+          which cast || echo "❌ cast binary not found in PATH"
       
-          if [[ -z "$FOUND_PATH" ]]; then
-            echo "foundryup binary NOT found anywhere! Check installer script."
-            exit 1
-          else
-            echo "foundryup found at: $FOUND_PATH"
-          fi
+          forge --version || echo "❌ forge command not available after install"
+          cast --version || echo "❌ cast command not available after install"
+
+      - name: 🔥 Manually Extract and Verify Binaries (Fallback)
+        shell: bash
+        run: |
+          mkdir -p ~/.config/.foundry/bin
+          tar -xvzf ~/.config/.foundry/share/foundry_stable_linux_amd64.tar.gz -C ~/.config/.foundry/bin
       
-          # Ensure the binary is executable
-          chmod +x "$FOUND_PATH"
+          # Ensure binaries are executable
+          chmod +x ~/.config/.foundry/bin/forge ~/.config/.foundry/bin/cast
       
-          # Add the discovered path explicitly to GITHUB_PATH for subsequent steps
-          BIN_DIR=$(dirname "$FOUND_PATH")
-          echo "$BIN_DIR" >> $GITHUB_PATH
-          echo "Path $BIN_DIR appended to GITHUB_PATH."
+          # Add to PATH
+          echo "~/.config/.foundry/bin" >> $GITHUB_PATH
+          export PATH="~/.config/.foundry/bin:$PATH"
       
-          # Immediately verify foundryup and Foundry binaries
-          echo "Verifying 'foundryup' command availability:"
-          foundryup --install "${VERSION_NAME}" || "$FOUND_PATH" --install "${VERSION_NAME}"
+          # Check if binaries are now found
+          which forge || echo "❌ forge binary not found in PATH"
+          which cast || echo "❌ cast binary not found in PATH"
       
-          # Check Forge and Cast
-          forge --version || echo "forge command not available after install"
-          cast --version || echo "cast command not available after install"
+          # Run version checks
+          forge --version || echo "❌ forge command not available after install"
+          cast --version || echo "❌ cast command not available after install"
+
           
 
   cleanup:
