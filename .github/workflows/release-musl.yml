@@ -1,40 +1,41 @@
 name: ReleaseMusl
 
 on:
-  workflow_dispatch: # Manually trigger the workflow
+  workflow_dispatch:
 
 jobs:
   test-foundryup-windows:
     runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Test Foundryup Installation (Windows)
+    steps:
+      - name: Set up Windows Environment
         shell: bash
         run: |
-          echo "=== Windows OS Detection ==="
-          uname -s
-          uname -m
+          echo "Setting up Windows environment..."
+          echo "RUNNER_OS=${RUNNER_OS}"
+          echo "USERPROFILE=$USERPROFILE"
+          echo "PATH=$PATH"
+
+      - name: Install Foundryup
+        shell: bash
+        run: |
+          echo "Downloading foundryup installer..."
+          curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install -o foundryup-install.sh
+          chmod +x foundryup-install.sh
+          ./foundryup-install.sh
           
-          echo "=== Downloading Foundryup ==="
-          curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
+          # Ensure foundryup path is added
+          echo "C:\Users\runneradmin\.config\foundry\bin" >> $GITHUB_PATH
+          export PATH="C:\Users\runneradmin\.config\foundry\bin:$PATH"
 
-          echo "=== Setting Foundry PATH ==="
-          export FOUNDARY_BIN_PATH="$USERPROFILE/.foundry/bin"
-          export PATH="$FOUNDARY_BIN_PATH:$PATH"
-          echo "$FOUNDARY_BIN_PATH" >> $GITHUB_PATH
-          
-          echo "=== Debug: Checking Installation Directory ==="
-          ls -lah "$FOUNDARY_BIN_PATH" || echo "❌ Foundry binaries directory not found!"
+      - name: Verify Foundryup Installation
+        shell: bash
+        run: |
+          which foundryup || echo "⚠️ foundryup command not found"
+          which forge || echo "⚠️ forge binary not found in PATH"
+          which cast || echo "⚠️ cast binary not found in PATH"
 
-          echo "=== Running Foundryup ==="
-          foundryup --install "stable" || echo "⚠️ Foundryup installation failed!"
+          foundryup --install stable || echo "⚠️ Foundryup installation failed"
+          forge --version || echo "⚠️ forge command not available after install"
+          cast --version || echo "⚠️ cast command not available after install"
 
-          echo "=== Verifying Forge & Cast Installation ==="
-          which forge || echo "❌ forge binary not found in PATH"
-          which cast || echo "❌ cast binary not found in PATH"
-
-          echo "=== Checking Forge & Cast Versions ==="
-          forge --version || echo "❌ forge command not available after install"
-          cast --version || echo "❌ cast command not available after install"
