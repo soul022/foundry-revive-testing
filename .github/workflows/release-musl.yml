@@ -9,33 +9,58 @@ jobs:
 
     steps:
       - name: Set up Windows Environment
-        shell: bash
+        shell: powershell
         run: |
           echo "Setting up Windows environment..."
-          echo "RUNNER_OS=${RUNNER_OS}"
-          echo "USERPROFILE=$USERPROFILE"
-          echo "PATH=$PATH"
+          echo "RUNNER_OS=${env:RUNNER_OS}"
+          echo "USERPROFILE=$env:USERPROFILE"
+          echo "PATH=$env:PATH"
 
       - name: Install Foundryup
-        shell: bash
+        shell: powershell
         run: |
           echo "Downloading foundryup installer..."
-          curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install -o foundryup-install.sh
-          chmod +x foundryup-install.sh
-          ./foundryup-install.sh
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install" -OutFile "foundryup-install.ps1"
+
+          # Run the installer
+          powershell -ExecutionPolicy Bypass -File .\foundryup-install.ps1
           
-          # Ensure foundryup path is added
-          echo "C:\Users\runneradmin\.config\foundry\bin" >> $GITHUB_PATH
-          export PATH="C:\Users\runneradmin\.config\foundry\bin:$PATH"
+          # Find the installation path
+          $FoundryPath = "C:\Users\runneradmin\.config\foundry\bin"
+          
+          # Add Foundryup to PATH
+          [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";$FoundryPath", [System.EnvironmentVariableTarget]::User)
+          $env:PATH += ";$FoundryPath"
+          echo "$FoundryPath" >> $GITHUB_PATH
 
       - name: Verify Foundryup Installation
-        shell: bash
+        shell: powershell
         run: |
-          which foundryup || echo "⚠️ foundryup command not found"
-          which forge || echo "⚠️ forge binary not found in PATH"
-          which cast || echo "⚠️ cast binary not found in PATH"
+          # Find foundryup binary
+          Get-ChildItem -Recurse -Path "C:\Users\runneradmin" -Filter "foundryup*" -ErrorAction SilentlyContinue
 
-          foundryup --install stable || echo "⚠️ Foundryup installation failed"
-          forge --version || echo "⚠️ forge command not available after install"
-          cast --version || echo "⚠️ cast command not available after install"
+          # Verify installation
+          $FoundryPath = "C:\Users\runneradmin\.config\foundry\bin"
 
+          if (!(Test-Path "$FoundryPath\foundryup.exe")) {
+            echo "⚠️ foundryup command not found!"
+            exit 1
+          }
+
+          # Install Foundry
+          & "$FoundryPath\foundryup.exe" --install stable
+
+          # Verify forge and cast installation
+          if (!(Test-Path "$FoundryPath\forge.exe")) {
+            echo "⚠️ forge command not found!"
+            exit 1
+          }
+
+          if (!(Test-Path "$FoundryPath\cast.exe")) {
+            echo "⚠️ cast command not found!"
+            exit 1
+          }
+
+          # Run versions
+          & "$FoundryPath\forge.exe" --version
+          & "$FoundryPath\cast.exe" --version
