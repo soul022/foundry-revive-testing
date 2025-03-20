@@ -31,10 +31,16 @@ jobs:
           echo "$FOUNDY_PATH" >> $GITHUB_PATH
           export PATH="$FOUNDY_PATH:$PATH"
 
+      - name: Manually Verify Installation Files
+        shell: bash
+        run: |
+          echo "🔍 Listing Foundry installation directory..."
+          ls -lah /c/Users/runneradmin/.config/foundry/
+          ls -lah /c/Users/runneradmin/.config/foundry/bin
+
       - name: Verify Foundryup Installation
         shell: bash
         run: |
-          # Debug system details
           echo "🖥️ System Info"
           uname -s
           uname -m
