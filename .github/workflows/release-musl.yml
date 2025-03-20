@@ -25,18 +25,28 @@ jobs:
           chmod +x foundryup-install.sh
           ./foundryup-install.sh || echo "⚠️ Foundryup installation failed!"
 
-          # Ensure foundryup path is added
-          FOUNDY_PATH="/c/Users/runneradmin/.config/foundry/bin"
-          echo "Adding Foundryup to PATH: $FOUNDY_PATH"
-          echo "$FOUNDY_PATH" >> $GITHUB_PATH
-          export PATH="$FOUNDY_PATH:$PATH"
-
-      - name: Manually Verify Installation Files
+      - name: Extract and Verify Binaries
         shell: bash
         run: |
-          echo "🔍 Listing Foundry installation directory..."
-          ls -lah /c/Users/runneradmin/.config/foundry/
-          ls -lah /c/Users/runneradmin/.config/foundry/bin
+          echo "Extracting Foundry binaries..."
+          FOUNDARY_BIN_PATH="/c/Users/runneradmin/.config/foundry/bin"
+          mkdir -p "$FOUNDARY_BIN_PATH"
+
+          # Extract binaries
+          unzip -o foundry_stable_win32_amd64.zip -d "$FOUNDARY_BIN_PATH"
+
+          # Ensure correct permissions
+          chmod +x "$FOUNDARY_BIN_PATH/forge.exe"
+          chmod +x "$FOUNDARY_BIN_PATH/cast.exe"
+
+          # Add to PATH
+          echo "Adding Foundryup binaries to PATH: $FOUNDARY_BIN_PATH"
+          echo "$FOUNDARY_BIN_PATH" >> $GITHUB_PATH
+          export PATH="$FOUNDARY_BIN_PATH:$PATH"
+
+          # Debugging output
+          echo "Listing extracted files..."
+          ls -lah "$FOUNDARY_BIN_PATH"
 
       - name: Verify Foundryup Installation
         shell: bash
@@ -44,15 +54,19 @@ jobs:
           echo "🖥️ System Info"
           uname -s
           uname -m
-          
+
           echo "Checking Foundryup installation..."
           which foundryup || echo "⚠️ foundryup command not found"
-          which forge || echo "⚠️ forge binary not found in PATH"
-          which cast || echo "⚠️ cast binary not found in PATH"
+          where.exe forge || echo "⚠️ forge binary not found in PATH"
+          where.exe cast || echo "⚠️ cast binary not found in PATH"
 
           echo "Running Foundryup installation..."
           foundryup --install stable || echo "⚠️ Foundryup installation failed!"
 
           echo "Checking installed versions..."
-          forge --version || echo "⚠️ forge command not available after install"
-          cast --version || echo "⚠️ cast command not available after install"
+          forge --version && echo "✅ forge is working!" || echo "❌ forge command not available after install"
+          cast --version && echo "✅ cast is working!" || echo "❌ cast command not available after install"
+
+          echo "🔍 Running sanity test for forge and cast..."
+          "$FOUNDARY_BIN_PATH/forge.exe" --help && echo "✅ forge.exe runs correctly!"
+          "$FOUNDARY_BIN_PATH/cast.exe" --help && echo "✅ cast.exe runs correctly!"
