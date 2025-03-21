@@ -144,15 +144,14 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
-          flags=(--target $TARGET --profile $PROFILE --bins 
-            --no-default-features --features aws-kms,cli,asm-keccak)
 
-          # `jemalloc` is not fully supported on MSVC or aarch64 Linux.
-          if [[ "$TARGET" != *msvc* && "$TARGET" != "aarch64-unknown-linux-gnu" ]]; then
-            flags+=(--features jemalloc)
-          fi
-
+          ext=""
           [[ "$TARGET" == *windows* ]] && ext=".exe"
+
+          flags="--target $TARGET --profile $PROFILE --bins --no-default-features --features aws-kms,cli,asm-keccak"
+          if [[ "$TARGET" != *msvc* && "$TARGET" != "aarch64-unknown-linux-gnu" ]]; then
+            flags="$flags --features jemalloc"
+          fi
 
           if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
             docker run -v $PWD:/opt/revive messense/rust-musl-cross@sha256:5afc91a4f7da8a14a6c688ebf49fef9b9ec30f28fd827f2cf7e7c4d6c31bd10a:x86_64-musl /bin/bash -c "
