@@ -96,6 +96,11 @@ jobs:
             svm_target_platform: linux-amd64
             platform: linux
             arch: amd64
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            svm_target_platform: windows-amd64
+            platform: win32
+            arch: amd64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -140,14 +145,14 @@ jobs:
           [[ "$TARGET" == *windows* ]] && ext=".exe"
 
           if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
-            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl -e flags="$flags" /bin/bash -c "
+            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
             cd /opt/revive
             rustup target add x86_64-unknown-linux-musl
-            cargo build $flags
+            cargo build "${flags[@]}"
           "
           sudo chown -R $(id -u):$(id -g) .
           else
-            cargo build $flags
+            cargo build "${flags[@]}"
           fi
 
           bins=(cast forge)
