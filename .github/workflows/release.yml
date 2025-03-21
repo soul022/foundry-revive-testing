@@ -134,26 +134,24 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
-          flags=(--target $TARGET --profile $PROFILE --bins 
-            --no-default-features --features aws-kms,cli,asm-keccak)
 
-          # `jemalloc` is not fully supported on MSVC or aarch64 Linux.
-          if [[ "$TARGET" != *msvc* && "$TARGET" != "aarch64-unknown-linux-gnu" ]]; then
-            flags+=(--features jemalloc)
-          fi
-
+          ext=""
           [[ "$TARGET" == *windows* ]] && ext=".exe"
 
+          flags="--target $TARGET --profile $PROFILE --bins --no-default-features --features aws-kms,cli,asm-keccak"
+          if [[ "$TARGET" != *msvc* && "$TARGET" != "aarch64-unknown-linux-gnu" ]]; then
+            flags="$flags --features jemalloc"
+          fi
+
           if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
-            FLAGS_STR="${flags[@]}"
-            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c '
+            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
             cd /opt/revive
             rustup target add x86_64-unknown-linux-musl
-            cargo build $FLAGS_STR
-          '
+            cargo build $flags
+          "
           sudo chown -R $(id -u):$(id -g) .
           else
-            cargo build "${flags[@]}"
+            cargo build $flags
           fi
 
           bins=(cast forge)
