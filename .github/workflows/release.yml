@@ -146,9 +146,7 @@ jobs:
 
           if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
             FLAGS_STR="${flags[@]}"
-            docker run -v "$PWD:/opt/revive" \
-            -e FLAGS_STR="$FLAGS_STR" \
-            messense/rust-musl-cross:x86_64-musl /bin/bash -c '
+            docker run -v "$PWD:/opt/revive" messense/rust-musl-cross:x86_64-musl /bin/bash -c '
             cd /opt/revive
             rustup target add x86_64-unknown-linux-musl
             cargo build $FLAGS_STR
