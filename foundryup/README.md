@@ -2,7 +2,7 @@
 
 Update or revert to a specific Foundry branch with ease.
 
-`foundryup` supports installing and managing multiple versions.
+`foundryup` supports installing and managing multiple versions
 
 ## Installing
 
