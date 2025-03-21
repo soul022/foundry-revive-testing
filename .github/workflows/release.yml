@@ -244,54 +244,57 @@ jobs:
             ${{ steps.artifacts.outputs.file_name }}
             ${{ steps.man.outputs.foundry_man }}
           
-      - name: Test Foundryup Installation
+      - name: Test Foundryup Musl Installation
         shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
-          uname -s
-          uname -m
-      
-          # Install foundryup
-          curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
-      
-          # Detect OS Type
-          OS_TYPE=$(uname -s)
-          if [[ "$OS_TYPE" == "Linux" ]]; then
-            FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
-            source "$HOME/.bashrc" || true  # Load foundryup path if available
-          elif [[ "$OS_TYPE" == "Darwin" ]]; then
-            FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
-            [[ -f "$HOME/.zshrc" ]] && source "$HOME/.zshrc" || true  # Fix MacOS path issues
-            [[ -f "$HOME/.bash_profile" ]] && source "$HOME/.bash_profile" || true
-          elif [[ "$OS_TYPE" == "MINGW"* || "$OS_TYPE" == "CYGWIN"* || "$OS_TYPE" == "MSYS"* ]]; then
-            FOUNDARY_BIN_PATH="$USERPROFILE/.foundry/bin"
-            export PATH="$FOUNDARY_BIN_PATH:$PATH"  # Manually add it for Windows
-          else
-            echo "❌ Unsupported OS: $OS_TYPE"
-            exit 1
-          fi
-      
-          # Ensure PATH is updated
-          echo "$FOUNDARY_BIN_PATH" >> $GITHUB_PATH
-          export PATH="$FOUNDARY_BIN_PATH:$PATH"
-      
-          # Determine installation version (stable or nightly)
-          if [[ "${{ env.IS_NIGHTLY }}" == "true" ]]; then
-            INSTALL_VERSION="nightly"
-          else
-            INSTALL_VERSION="stable"
-          fi
-      
-          # Run Foundry installation
-          foundryup --install "$INSTALL_VERSION" || echo "⚠️ Foundryup installation failed!"
-      
-          # Verify installation
-          which forge || echo "❌ forge binary not found in PATH"
-          which cast || echo "❌ cast binary not found in PATH"
-      
-          forge --version || echo "❌ forge command not available after install"
-          cast --version || echo "❌ cast command not available after install"
-     
-
+          if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
+            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
+            uname -s
+            uname -m
+        
+            # Install foundryup
+            curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
+        
+            # Detect OS Type
+            OS_TYPE=$(uname -s)
+            if [[ "$OS_TYPE" == "Linux" ]]; then
+              FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
+              source "$HOME/.bashrc" || true  # Load foundryup path if available
+            elif [[ "$OS_TYPE" == "Darwin" ]]; then
+              FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
+              [[ -f "$HOME/.zshrc" ]] && source "$HOME/.zshrc" || true  # Fix MacOS path issues
+              [[ -f "$HOME/.bash_profile" ]] && source "$HOME/.bash_profile" || true
+            elif [[ "$OS_TYPE" == "MINGW"* || "$OS_TYPE" == "CYGWIN"* || "$OS_TYPE" == "MSYS"* ]]; then
+              FOUNDARY_BIN_PATH="$USERPROFILE/.foundry/bin"
+              export PATH="$FOUNDARY_BIN_PATH:$PATH"  # Manually add it for Windows
+            else
+              echo "❌ Unsupported OS: $OS_TYPE"
+              exit 1
+            fi
+        
+            # Ensure PATH is updated
+            echo "$FOUNDARY_BIN_PATH" >> $GITHUB_PATH
+            export PATH="$FOUNDARY_BIN_PATH:$PATH"
+        
+            # Determine installation version (stable or nightly)
+            if [[ "${{ env.IS_NIGHTLY }}" == "true" ]]; then
+              INSTALL_VERSION="nightly"
+            else
+              INSTALL_VERSION="stable"
+            fi
+        
+            # Run Foundry installation
+            foundryup --install "$INSTALL_VERSION" || echo "⚠️ Foundryup installation failed!"
+        
+            # Verify installation
+            which forge || echo "❌ forge binary not found in PATH"
+            which cast || echo "❌ cast binary not found in PATH"
+        
+            forge --version || echo "❌ forge command not available after install"
+            cast --version || echo "❌ cast command not available after install"
+          "
 
   cleanup:
     name: Release cleanup
