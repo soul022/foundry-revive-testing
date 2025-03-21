@@ -1,9 +1,14 @@
-name: Release
+name: release
 
 on:
+  push:
+    tags:
+      - "stable"
+      - "rc"
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
-      isNightly:
+      is_nightly:
         description: "Is this a nightly version or a release - Y or N"
         type: string
         required: true
@@ -16,10 +21,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  IS_NIGHTLY: ${{ inputs.isNightly == 'Y' }}
+  IS_NIGHTLY: ${{ inputs.is_nightly == 'Y' }}
   PROFILE: maxperf
   STABLE_VERSION: ${{ inputs.version }}
-  TAG_NAME: stable
 
 jobs:
   prepare:
@@ -27,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      tag_name: ${{ env.TAG_NAME }}
+      tag_name: ${{ steps.release_info.outputs.tag_name }}
       release_name: ${{ steps.release_info.outputs.release_name }}
       changelog: ${{ steps.build_changelog.outputs.changelog }}
     steps:
@@ -42,8 +46,8 @@ jobs:
             echo "tag_name=nightly-${GITHUB_SHA}" >> $GITHUB_OUTPUT
             echo "release_name=Nightly ($(date '+%Y-%m-%d'))" >> $GITHUB_OUTPUT
           else
-            echo "tag_name=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-            echo "release_name=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
+            echo "tag_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            echo "release_name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           fi
 
       # Creates a `nightly-SHA` tag for this specific nightly
@@ -54,7 +58,7 @@ jobs:
         if: ${{ env.IS_NIGHTLY == 'true' }}
         uses: actions/github-script@v7
         env:
-          TAG_NAME: ${{ env.TAG_NAME }}
+          TAG_NAME: ${{ steps.release_info.outputs.tag_name }}
         with:
           script: |
             const createTag = require('./.github/scripts/create-tag.js')
@@ -66,7 +70,7 @@ jobs:
         with:
           configuration: "./.github/changelog.json"
           fromTag: ${{ env.IS_NIGHTLY == 'true' && 'nightly' || env.STABLE_VERSION }}
-          toTag: ${{ env.TAG_NAME }}
+          toTag: ${{ steps.release_info.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -91,6 +95,21 @@ jobs:
             target: x86_64-unknown-linux-musl
             svm_target_platform: linux-amd64
             platform: linux
+            arch: amd64
+          - runner: macos-14
+            target: x86_64-apple-darwin
+            svm_target_platform: macosx-amd64
+            platform: darwin
+            arch: amd64
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            svm_target_platform: macosx-aarch64
+            platform: darwin
+            arch: arm64
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            svm_target_platform: windows-amd64
+            platform: win32
             arch: amd64
     steps:
       - uses: actions/checkout@v4
@@ -125,17 +144,18 @@ jobs:
         shell: bash
         run: |
           set -eo pipefail
+          flags=(--target $TARGET --profile $PROFILE --bins 
+            --no-default-features --features aws-kms,cli,asm-keccak)
 
-          ext=""
-          [[ "$TARGET" == *windows* ]] && ext=".exe"
-
-          flags="--target $TARGET --profile $PROFILE --bins --no-default-features --features aws-kms,cli,asm-keccak"
+          # `jemalloc` is not fully supported on MSVC or aarch64 Linux.
           if [[ "$TARGET" != *msvc* && "$TARGET" != "aarch64-unknown-linux-gnu" ]]; then
-            flags="$flags --features jemalloc"
+            flags+=(--features jemalloc)
           fi
 
+          [[ "$TARGET" == *windows* ]] && ext=".exe"
+
           if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
-            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
+            docker run -v $PWD:/opt/revive messense/rust-musl-cross@sha256:5afc91a4f7da8a14a6c688ebf49fef9b9ec30f28fd827f2cf7e7c4d6c31bd10a:x86_64-musl /bin/bash -c "
             cd /opt/revive
             rustup target add x86_64-unknown-linux-musl
             cargo build $flags
@@ -228,58 +248,6 @@ jobs:
           files: |
             ${{ steps.artifacts.outputs.file_name }}
             ${{ steps.man.outputs.foundry_man }}
-          
-      - name: Test Foundryup Musl Installation
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: |
-          if [[ "$TARGET" == "x86_64-unknown-linux-musl" ]]; then
-            docker run -v $PWD:/opt/revive messense/rust-musl-cross:x86_64-musl /bin/bash -c "
-            uname -s
-            uname -m
-        
-            # Install foundryup
-            curl -L https://raw.githubusercontent.com/soul022/foundry-revive-testing/refs/heads/master/foundryup/install | bash
-        
-            # Detect OS Type
-            OS_TYPE=$(uname -s)
-            if [[ "$OS_TYPE" == "Linux" ]]; then
-              FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
-              source "$HOME/.bashrc" || true  # Load foundryup path if available
-            elif [[ "$OS_TYPE" == "Darwin" ]]; then
-              FOUNDARY_BIN_PATH="$HOME/.config/.foundry/bin"
-              [[ -f "$HOME/.zshrc" ]] && source "$HOME/.zshrc" || true  # Fix MacOS path issues
-              [[ -f "$HOME/.bash_profile" ]] && source "$HOME/.bash_profile" || true
-            elif [[ "$OS_TYPE" == "MINGW"* || "$OS_TYPE" == "CYGWIN"* || "$OS_TYPE" == "MSYS"* ]]; then
-              FOUNDARY_BIN_PATH="$USERPROFILE/.foundry/bin"
-              export PATH="$FOUNDARY_BIN_PATH:$PATH"  # Manually add it for Windows
-            else
-              echo "❌ Unsupported OS: $OS_TYPE"
-              exit 1
-            fi
-        
-            # Ensure PATH is updated
-            echo "$FOUNDARY_BIN_PATH" >> $GITHUB_PATH
-            export PATH="$FOUNDARY_BIN_PATH:$PATH"
-        
-            # Determine installation version (stable or nightly)
-            if [[ "${{ env.IS_NIGHTLY }}" == "true" ]]; then
-              INSTALL_VERSION="nightly"
-            else
-              INSTALL_VERSION="stable"
-            fi
-        
-            # Run Foundry installation
-            foundryup --install "$INSTALL_VERSION" || echo "⚠️ Foundryup installation failed!"
-        
-            # Verify installation
-            which forge || echo "❌ forge binary not found in PATH"
-            which cast || echo "❌ cast binary not found in PATH"
-        
-            forge --version || echo "❌ forge command not available after install"
-            cast --version || echo "❌ cast command not available after install"
-          "
 
   cleanup:
     name: Release cleanup
